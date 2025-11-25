@@ -11,6 +11,7 @@ dist
 dist-ssr
 *.local
 .env
+.bolt
 .vscode/*
 !.vscode/extensions.json
 .idea
