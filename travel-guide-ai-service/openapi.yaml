@@ -1,0 +1,180 @@
+openapi: 3.1.0
+info:
+  title: Travel Guide AI Service
+  version: 0.1.0
+  description: |
+    Express service that orchestrates AI itinerary suggestions via Ollama.
+servers:
+  - url: http://localhost:4000
+paths:
+  /health:
+    get:
+      summary: Readiness probe
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  model:
+                    type: string
+                    example: llama3.1
+  /api/ai/itinerary:
+    post:
+      summary: Generate itinerary recommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiItineraryRequest'
+      responses:
+        '200':
+          description: Suggestions returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiItineraryResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Failed to reach underlying model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    AiPreferences:
+      type: object
+      required:
+        - days
+        - pace
+        - style
+        - interests
+      properties:
+        days:
+          type: integer
+          minimum: 1
+          example: 3
+        pace:
+          type: string
+          enum: [relaxed, balanced, fast]
+          example: balanced
+        style:
+          type: string
+          enum: [family, culture, foodie, nightlife]
+          example: family
+        interests:
+          type: array
+          items:
+            type: string
+          example: ['art & culture', 'foodie finds']
+    LocationReference:
+      type: object
+      required: [id, name, lat, lng, category]
+      properties:
+        id:
+          type: string
+          example: madrid-1
+        name:
+          type: string
+          example: Museo del Prado
+        lat:
+          type: number
+          format: double
+          example: 40.4138
+        lng:
+          type: number
+          format: double
+          example: -3.6921
+        category:
+          type: string
+          example: Museum
+    AiItineraryRequest:
+      type: object
+      required: [cityId, cityName, preferences]
+      properties:
+        cityId:
+          type: string
+          example: madrid
+        cityName:
+          type: string
+          example: Madrid
+        preferences:
+          $ref: '#/components/schemas/AiPreferences'
+        existingLocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationReference'
+    AiLocationSuggestion:
+      allOf:
+        - $ref: '#/components/schemas/LocationReference'
+        - type: object
+          required: [description, reason, confidence, source]
+          properties:
+            description:
+              type: string
+              example: Spain's most celebrated art museum with masterpieces by Goya and Velázquez.
+            reason:
+              type: string
+              example: Aligns with your art & culture interest and is central to Madrid.
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+              example: 0.84
+            source:
+              type: string
+              enum: [ai]
+              example: ai
+    AiItineraryResponse:
+      type: object
+      required: [locations]
+      properties:
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiLocationSuggestion'
+        metadata:
+          type: object
+          properties:
+            model:
+              type: string
+              example: llama3.1
+            total_duration:
+              type: number
+              example: 2.31
+            prompt_eval_count:
+              type: integer
+              example: 512
+            eval_count:
+              type: integer
+              example: 256
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: preferences with pace and days are required.
+        details:
+          type: string
+          nullable: true
+*** End Patch
+
